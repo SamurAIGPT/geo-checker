@@ -11,7 +11,7 @@
 
 **GitHub Repository:** [github.com/SamurAIGPT/geo-checker](https://github.com/SamurAIGPT/geo-checker)
 
-**Live Demo Preview:** [geo-checker.vercel.app](https://geo-checker.vercel.app/)
+**Live Demo Preview:** [geo-checker-silk.vercel.app](https://geo-checker-silk.vercel.app/)
 
 ---
 
@@ -70,7 +70,7 @@ This architecture is engineered explicitly for **Vercel** serverless environment
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/SamurAIGPT/geo-checker)
 
-**Live App:** [geo-checker.vercel.app](https://geo-checker.vercel.app/)
+**Live App:** [geo-checker-silk.vercel.app](https://geo-checker-silk.vercel.app/)
 
 ### 🔑 Required Environment Variables
 
