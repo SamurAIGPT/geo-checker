@@ -37,7 +37,15 @@ export async function POST(req) {
       console.log(`[MUAPI_WEBHOOK] Updated report ${creation.id} to failed`);
     } else {
       const outputs = data.outputs || [];
-      let outputText = outputs[0] || (typeof data.output === 'string' ? data.output : data.output?.text);
+      const rawOutput = outputs[0] || data.output;
+      let outputText = "";
+      if (typeof rawOutput === "string") {
+        outputText = rawOutput;
+      } else if (rawOutput && rawOutput.text) {
+        outputText = rawOutput.text;
+      } else if (data.result) {
+        outputText = typeof data.result === "string" ? data.result : JSON.stringify(data.result);
+      }
 
       if (outputText) {
         let parsedScore = 0;

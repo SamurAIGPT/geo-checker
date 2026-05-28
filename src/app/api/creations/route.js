@@ -54,7 +54,15 @@ export async function GET(req) {
 
             if (state === "completed" || state === "succeeded") {
               const outputs = checkData.outputs || [];
-              let outputText = outputs[0] || (typeof checkData.output === 'string' ? checkData.output : checkData.output?.text);
+              const rawOutput = outputs[0] || checkData.output;
+              let outputText = "";
+              if (typeof rawOutput === "string") {
+                outputText = rawOutput;
+              } else if (rawOutput && rawOutput.text) {
+                outputText = rawOutput.text;
+              } else if (checkData.result) {
+                outputText = typeof checkData.result === "string" ? checkData.result : JSON.stringify(checkData.result);
+              }
 
               if (outputText) {
                 let parsedScore = 0;
@@ -115,7 +123,15 @@ export async function GET(req) {
 
               if (state === "completed" || state === "succeeded") {
                 const outputs = checkData.outputs || [];
-                let outputText = outputs[0] || (typeof checkData.output === 'string' ? checkData.output : checkData.output?.text);
+                const rawOutput = outputs[0] || checkData.output;
+                let outputText = "";
+                if (typeof rawOutput === "string") {
+                  outputText = rawOutput;
+                } else if (rawOutput && rawOutput.text) {
+                  outputText = rawOutput.text;
+                } else if (checkData.result) {
+                  outputText = typeof checkData.result === "string" ? checkData.result : JSON.stringify(checkData.result);
+                }
 
                 if (outputText) {
                   let parsedScore = 0;

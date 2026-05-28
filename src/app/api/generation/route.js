@@ -176,7 +176,15 @@ DO NOT return any text outside of the JSON object. Do not wrap the JSON object i
                   const state = pollJson.status || pollJson.state;
                   if (state === "completed" || state === "succeeded") {
                     const outputs = pollJson.outputs || [];
-                    const outputText = outputs[0] || (typeof pollJson.output === 'string' ? pollJson.output : pollJson.output?.text);
+                    const rawOutput = outputs[0] || pollJson.output;
+                    let outputText = "";
+                    if (typeof rawOutput === "string") {
+                      outputText = rawOutput;
+                    } else if (rawOutput && rawOutput.text) {
+                      outputText = rawOutput.text;
+                    } else if (pollJson.result) {
+                      outputText = typeof pollJson.result === "string" ? pollJson.result : JSON.stringify(pollJson.result);
+                    }
                     if (outputText) {
                       reportData = outputText;
                       status = "completed";

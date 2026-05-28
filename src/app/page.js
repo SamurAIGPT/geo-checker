@@ -193,10 +193,15 @@ export default function StudioPage() {
       updateSession(); // refresh credits
 
       if (data.status === "completed" && data.reportData) {
-        const parsedReport = JSON.parse(data.reportData);
-        setResult(parsedReport);
-        setReportId(data.id);
-        setGeneratingStatus("success");
+        try {
+          const parsedReport = JSON.parse(data.reportData);
+          setResult(parsedReport);
+          setReportId(data.id);
+          setGeneratingStatus("success");
+        } catch (e) {
+          console.error("Failed to parse reportData directly, falling back to poll:", e);
+          pollResult(data.id);
+        }
       } else {
         pollResult(data.id);
       }
@@ -222,12 +227,26 @@ export default function StudioPage() {
         const res = await fetch(`/api/creations?id=${id}`);
         if (res.ok) {
           const data = await res.json();
-          if (data.status === "completed" && data.reportData) {
-            const parsedReport = JSON.parse(data.reportData);
-            setResult(parsedReport);
-            setReportId(data.id);
-            setGeneratingStatus("success");
-            completed = true;
+          if (data.status === "completed") {
+            if (data.reportData) {
+              try {
+                const parsedReport = JSON.parse(data.reportData);
+                setResult(parsedReport);
+                setReportId(data.id);
+                setGeneratingStatus("success");
+                completed = true;
+              } catch (e) {
+                console.error("Failed to parse polled reportData:", e);
+                // If it is completed but cannot parse, we check if it is the last attempt
+                if (attempts >= maxAttempts) {
+                  setGeneratingError("AI visibility check report could not be parsed. Please try again.");
+                  setGeneratingStatus("error");
+                  completed = true;
+                }
+              }
+            } else {
+              console.warn("Report status is completed but reportData is empty. Retrying...");
+            }
           } else if (data.status === "failed") {
             setGeneratingError(
               "AI visibility check failed. Please verify your website link and try again.",
@@ -248,6 +267,7 @@ export default function StudioPage() {
       setGeneratingStatus("error");
     }
   };
+
 
   const handleDownload = () => {
     if (!result) return;
