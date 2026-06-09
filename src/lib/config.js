@@ -1,4 +1,5 @@
 const config = {
+  appName: "Geo Checker",
   auth: {
     google: {
       clientId: process.env.GOOGLE_CLIENT_ID,

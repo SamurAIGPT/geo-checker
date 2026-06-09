@@ -14,10 +14,10 @@ export const BillingService = {
           price_data: {
             currency: "usd",
             product_data: {
-              name: `GEO Checker - ${plan.name}`,
-              description: `Purchase ${plan.credits} credits to perform AI visibility audits.`,
+              name: `${config.stripe.plans[planId].name}`,
+              description: `Purchase ${plan.credits} credits to perform AI generations.`,
             },
-            unit_amount: plan.price, // Price in cents
+            unit_amount: plan.price,
           },
           quantity: 1,
         },
@@ -25,28 +25,14 @@ export const BillingService = {
       mode: "payment",
       success_url: `${config.auth.url}/pricing?success=true`,
       cancel_url: `${config.auth.url}/pricing?canceled=true`,
-      metadata: {
-        userId: userId,
-        credits: plan.credits.toString(),
-      },
+      metadata: { userId, credits: plan.credits.toString() },
     });
 
     return session.url;
   },
 
   async handleWebhook(body, signature) {
-    let event;
-
-    try {
-      event = stripe.webhooks.constructEvent(
-        body,
-        signature,
-        config.stripe.webhookSecret
-      );
-    } catch (err) {
-      throw new Error(`Webhook Error: ${err.message}`);
-    }
-
+    const event = stripe.webhooks.constructEvent(body, signature, config.stripe.webhookSecret);
     if (event.type === "checkout.session.completed") {
       const session = event.data.object;
       const userId = session.metadata.userId;
@@ -57,7 +43,6 @@ export const BillingService = {
         return { success: true, userId, credits };
       }
     }
-
     return { success: false };
   }
 };
