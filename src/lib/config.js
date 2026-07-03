@@ -21,8 +21,12 @@ const config = {
     }
   },
   ai: {
-    apiKey: process.env.MUAPIAPP_API_KEY,
-    generationCost: 18, // Deducted per AI call for GEO Checker
+    // provider: "muapi" or "openrouter"
+    provider: process.env.AI_PROVIDER || "openrouter",
+    // OpenRouter: set OPENROUTER_API_KEY and optionally OPENROUTER_API_URL
+    apiKey: process.env.OPENROUTER_API_KEY || process.env.MUAPIAPP_API_KEY,
+    openrouterUrl: process.env.OPENROUTER_API_URL || "https://api.openrouter.ai",
+    generationCost: 18, // Deducted per AI call for GEO Checker (recalibrar conforme provider)
   }
 };
 export default config;

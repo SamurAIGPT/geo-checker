@@ -4,6 +4,7 @@ import { authOptions } from "../../../lib/auth";
 import { prisma } from "../../../lib/prisma";
 import { UserService } from "../../../lib/services/user";
 import config from "../../../lib/config";
+import { generateViaOpenRouter } from "../../../lib/services/openrouter";
 
 function extractTextFromHtml(html) {
   if (!html) return "";
@@ -80,7 +81,7 @@ export async function POST(req) {
 
     // 3. Prepare Prompts
     const systemPrompt = `You are an expert Generative Engine Optimization (GEO) auditor and AI Search Visibility specialist.
-Your task is to analyze the scraped website text and evaluate how well it is optimized to be cited, referenced, and surfaced in AI-driven search answers (ChatGPT, Perplexity, Google AI Overviews, Claude, Gemini) for the user's target search query.
+Your task is to analyze the scraped website text and evaluate how well it is optimized to be cited, referenced, and surfaced in AI-driven search answers (ChatGPT, Perplexity, Google AI Overviews, [...]
 
 You MUST respond with a single, valid JSON object matching this schema exactly:
 {
@@ -111,101 +112,34 @@ You MUST respond with a single, valid JSON object matching this schema exactly:
   ]
 }
 
-DO NOT return any text outside of the JSON object. Do not wrap the JSON object in markdown blocks like \`\`\`json ... \`\`\`. Just return the raw JSON object string.`;
+DO NOT return any text outside of the JSON object. Do not wrap the JSON object in markdown blocks like ```json ... ```; Just return the raw JSON object string.`;
 
     let prompt = `Target URL: ${url}\nTarget Search Query / Keyword: ${keyword}\n\n`;
     if (scrapingBlocked || !scrapedText) {
-      prompt += `[Notice: Scraper was blocked by target server. Perform a simulated GEO audit based on target URL domain metadata, niche, and known entity reputation for ${url} and target search query: ${keyword}]`;
+      prompt += `[Notice: Scraper was blocked by target server. Perform a simulated GEO audit based on target URL domain metadata, niche, and known entity reputation for ${url} and target search [...]`;
     } else {
       prompt += `Scraped Page Content:\n${scrapedText}`;
     }
 
-    // 4. Submit to MuAPI any-llm
+    // 4. Submit to AI provider (OpenRouter)
     const apiKey = config.ai.apiKey;
     let reportData = "";
-    let requestId = `mock_${Date.now()}`;
+    let requestId = `openrouter_${Date.now()}`;
     let status = "processing";
 
     if (apiKey && !apiKey.includes("your_") && apiKey.trim() !== "") {
       try {
-        const webhookUrl = `${config.auth.webhook_url}/api/webhook/muapi`;
-        const submitUrl = `https://api.muapi.ai/api/v1/any-llm-models?webhook=${encodeURIComponent(webhookUrl)}`;
-
-        const inputPayload = {
-          prompt,
-          system_prompt: systemPrompt,
-          model: "google/gemini-2.5-flash",
-          temperature: 1
-        };
-
-        const submitRes = await fetch(submitUrl, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-api-key": apiKey
-          },
-          body: JSON.stringify(inputPayload)
-        });
-
-        if (submitRes.ok) {
-          const resJson = await submitRes.json();
-          const reqId = resJson.request_id || resJson.id;
-          if (reqId) {
-            requestId = reqId;
-
-            // Poll for result (max 15s)
-            let completed = false;
-            let attempts = 0;
-            const maxAttempts = 6;
-
-            while (!completed && attempts < maxAttempts) {
-              await new Promise(resolve => setTimeout(resolve, 2500));
-              attempts++;
-
-              try {
-                const pollRes = await fetch(`https://api.muapi.ai/api/v1/predictions/${requestId}/result`, {
-                  method: "GET",
-                  headers: {
-                    "Content-Type": "application/json",
-                    "x-api-key": apiKey
-                  }
-                });
-
-                if (pollRes.ok) {
-                  const pollJson = await pollRes.json();
-                  const state = pollJson.status || pollJson.state;
-                  if (state === "completed" || state === "succeeded") {
-                    const outputs = pollJson.outputs || [];
-                    const rawOutput = outputs[0] || pollJson.output;
-                    let outputText = "";
-                    if (typeof rawOutput === "string") {
-                      outputText = rawOutput;
-                    } else if (rawOutput && rawOutput.text) {
-                      outputText = rawOutput.text;
-                    } else if (pollJson.result) {
-                      outputText = typeof pollJson.result === "string" ? pollJson.result : JSON.stringify(pollJson.result);
-                    }
-                    if (outputText) {
-                      reportData = outputText;
-                      status = "completed";
-                      completed = true;
-                    }
-                  } else if (state === "failed") {
-                    console.error("MuAPI generation failed:", pollJson.error);
-                    status = "failed";
-                    break;
-                  }
-                }
-              } catch (pollErr) {
-                console.error("MuAPI polling error:", pollErr);
-              }
-            }
-          }
-        }
+        const model = "gpt-4o-mini"; // ajuste conforme necessário
+        const genRes = await generateViaOpenRouter(systemPrompt, prompt, { model, temperature: 1 });
+        reportData = genRes.text || JSON.stringify(genRes.raw || "");
+        requestId = (genRes.raw && (genRes.raw.id || genRes.raw.request_id)) || requestId;
+        status = "completed";
       } catch (err) {
-        console.warn("MuAPI call failed, falling back to mocks:", err.message);
+        console.warn("OpenRouter generation failed, falling back to mocks:", err.message);
       }
-    } else {
+    }
+
+    if (!reportData) {
       // Mock mode fallback
       await new Promise(resolve => setTimeout(resolve, 3000));
       reportData = JSON.stringify({
